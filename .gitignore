@@ -4,3 +4,4 @@ dist/
 logs/
 data/
 node_modules/
+*.sh
