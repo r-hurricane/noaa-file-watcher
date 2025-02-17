@@ -10,10 +10,13 @@ import {IFileInfo, IFileService} from "./services/fileService.js";
 import {Logger} from 'winston';
 import nodePath from "node:path";
 import {parsers} from './parsers/index.js';
+import {IpcController} from "./notifications/ipcSocket.js";
+import {IParserResult} from "./parsers/parser.js";
 
 export class Watcher {
 
     private readonly database: FileDatabase;
+    private readonly ipcController: IpcController;
     private readonly watcherConfig: ConfigWatcher;
     private readonly pathConfig: ConfigPath;
     private readonly baseUrl: URL;
@@ -22,8 +25,9 @@ export class Watcher {
     private running: boolean = false;
     private timeout: NodeJS.Timeout | null = null;
 
-    public constructor(database: FileDatabase, watcherConfig: ConfigWatcher, pathConfig: ConfigPath) {
+    public constructor(database: FileDatabase, ipcController: IpcController, watcherConfig: ConfigWatcher, pathConfig: ConfigPath) {
         this.database = database;
+        this.ipcController = ipcController;
         this.watcherConfig = watcherConfig;
         this.pathConfig = pathConfig;
         this.baseUrl = new URL(nodePath.normalize(nodePath.join(watcherConfig.baseUrl, pathConfig.path)));
@@ -126,7 +130,7 @@ export class Watcher {
         const pathDate = dateFns.format(modifiedDate, 'yyyy\'/\'MM');
         const saveDir = nodePath.join(config.dataPath, pathDate, nodePath.dirname(file.url.pathname));
         const fileDate = dateFns.format(modifiedDate, 'dd-HHmm');
-        const savePath = nodePath.join(saveDir, `${fileDate}-${nodePath.basename(file.url.pathname)}`);
+        const savePath = nodePath.resolve(nodePath.join(saveDir, `${fileDate}-${nodePath.basename(file.url.pathname)}`));
 
         // Check folder exists
         if (!fs.existsSync(saveDir)) {
@@ -138,22 +142,31 @@ export class Watcher {
         this.logger.verbose(`Saving new file to file system: ${savePath}`);
         fs.writeFileSync(savePath, fileContents);
 
-        // TODO: Run parser if specified
-        let code: string | null = null;
+        // Run parser if specified
+        let parseResult: IParserResult | null = null;
         if (this.pathConfig.parser && this.pathConfig.parser.toLowerCase() !== 'none') {
             const parser = parsers.get(this.pathConfig.parser.toLowerCase());
             if (!parser)
                 throw new Error(`Unknown parser type ${(this.pathConfig.parser)}`);
-            code = await parser.parse(file, savePath, fileContents);
+            parseResult = await parser.parse(file, savePath, fileContents);
         }
 
         // Save the new entry to the database for the next check
         this.database.insertFile({
             id: null,
             href: file.url.href,
-            code: code,
+            code: parseResult?.code ?? null,
             modifiedOn: file.lastModified?.getTime() ?? null,
             savePath: savePath
+        });
+
+        // Send notification to the IPC Clients
+        await this.ipcController.broadcast('new', {
+            file: file,
+            savePath: savePath,
+            parser: this.pathConfig.parser,
+            code: parseResult?.code,
+            json: parseResult?.json
         });
     }
 

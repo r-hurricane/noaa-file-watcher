@@ -1,5 +1,5 @@
 ﻿import {IFileInfo} from "../services/fileService.js";
-import {ParserBase} from "./parser.js";
+import {IParserResult, ParserBase} from "./parser.js";
 import nodePath from "node:path";
 import fs from "node:fs";
 import {parseAtcf} from '@r-hurricane/atcf-parser';
@@ -10,7 +10,9 @@ export class AtcfParser extends ParserBase {
         super('ATCF');
     }
 
-    public override async parse(_file: IFileInfo, savePath: string, contents: Uint8Array<ArrayBufferLike>): Promise<string | null> {
+    public override async parse(_file: IFileInfo, savePath: string, contents: Uint8Array<ArrayBufferLike>)
+        : Promise<IParserResult>
+    {
 
         // Parse the ATCF text
         this.logger.debug('Starting to parse ATCF contents');
@@ -29,6 +31,6 @@ export class AtcfParser extends ParserBase {
         fs.writeFileSync(saveJsonPath, jsonContents);
         this.logger.debug(`Saved JSON to filesystem at ${saveJsonPath}`);
 
-        return saveUrl.name;
+        return { code: `ATCF.${saveUrl.name}`, json: atcfFile };
     }
 }

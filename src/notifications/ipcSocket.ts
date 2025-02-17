@@ -24,16 +24,23 @@ export class IpcController {
 
         // Create the server
         this.server = createServer((socket) => {
-            this.logger.verbose(`IPC client connected: ${socket.localAddress}:${socket.localPort}`);
+            let socketName = new Date().getTime().toString();
+            this.logger.verbose(`IPC client connected: ${socketName}`);
             this.clientList.push(socket);
 
+            socket.on('data', data => {
+                const oldName = socketName;
+                socketName = data.toString();
+                this.logger.verbose(`IPC client ${oldName} => ${socketName}`);
+            });
+
             socket.on('end', () => {
-                this.logger.verbose(`IPC client disconnected: ${socket.localAddress}:${socket.localPort}`);
+                this.logger.verbose(`IPC client disconnected: ${socketName}`);
                 this.clientList = this.clientList.filter(c => c !== socket);
             });
 
             socket.on('error', (err) => {
-                this.logger.verbose(`IPC client error: ${socket.localAddress}:${socket.localPort} - ${err}`);
+                this.logger.verbose(`IPC client error: ${socketName} - ${err}`);
                 this.clientList = this.clientList.filter(c => c !== socket);
             });
         });
@@ -44,10 +51,14 @@ export class IpcController {
         });
     }
 
-    public broadcast(data: string): Promise<void[]> {
+    public broadcast(cmd: string, data?: object | null): Promise<void[]> {
+        const message = JSON.stringify({ cmd, data });
+        this.logger.debug(`Sending data to socket: ${message}`);
         return Promise.all(this.clientList
             .map(c => new Promise<void>((res) => {
-                c.write(data, _ => res());
+                c.cork();
+                c.write(String.fromCharCode(2) + message + String.fromCharCode(3), _ => res());
+                process.nextTick(() => c.uncork());
             }))
         );
     }

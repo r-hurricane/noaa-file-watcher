@@ -4,11 +4,17 @@
   "description": "Watches for changes to data files, parses them, and stores them for future use.",
   "main": "dist/index.js",
   "type": "module",
+  "private": true,
   "scripts": {
     "build": "npx tsc -p tsconfig.json",
     "test": "npm run build && node --experimental-sqlite dist/index.js"
   },
-  "author": "u/Beach-Brews",
+  "contributors": [
+    {
+      "name": "Tyler Hadidon (Beach-Brews)",
+      "url": "https://thadidon.com"
+    }
+  ],
   "license": "MIT",
   "devDependencies": {
     "@types/config": "^3.3.5",

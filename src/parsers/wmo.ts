@@ -1,7 +1,7 @@
 ﻿import fs from "node:fs";
 import {IFileInfo} from "../services/fileService.js";
 import nodePath from 'node:path';
-import {ParserBase} from "./parser.js";
+import {IParserResult, ParserBase} from "./parser.js";
 import {parseWmo} from "@r-hurricane/wmo-parser";
 import {NOUS42} from "@r-hurricane/wmo-parser/dist/parsers/no/NOUS42.js";
 
@@ -11,7 +11,8 @@ export class WmoParser extends ParserBase {
         super('WMO');
     }
 
-    public override async parse(file: IFileInfo, savePath: string, fileContents: Uint8Array<ArrayBufferLike>): Promise<string | null> {
+    public override async parse(file: IFileInfo, savePath: string, fileContents: Uint8Array<ArrayBufferLike>)
+        : Promise<IParserResult> {
         // Parse the WMO
         this.logger.debug('Starting to parse WMO contents');
         if (this.logger.isSillyEnabled()) this.logger.silly(fileContents);
@@ -28,9 +29,10 @@ export class WmoParser extends ParserBase {
         this.logger.debug(`Saved JSON to filesystem at ${saveJsonPath}`);
 
         // TCPOD Needs to have a special code
+        let code = `WMO.${parsedWmo.header?.designator}.${parsedWmo.header?.station}`;
         if (parsedWmo.message instanceof NOUS42)
-            return `${parsedWmo.header?.designator}.${parsedWmo.header?.station}.${parsedWmo.message.header.tcpod.full}`;
+            code += `.${parsedWmo.message.header.tcpod.full}`;
 
-        return `${parsedWmo.header?.designator}.${parsedWmo.header?.station}`;
+        return { code: code, json: parsedWmo };
     }
 }

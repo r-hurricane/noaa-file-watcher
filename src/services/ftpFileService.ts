@@ -56,9 +56,18 @@ export class FtpFileService extends FileServiceBase {
         if (dateStr.match(/\w{3}\s+\d\d?\s+\d{4}/))
             return dateFns.parse(dateStr, 'MMM dd yyyy', new Date());
 
-        // If the date looks like MMM dd HH:mm
-        if (dateStr.match(/\w{3}\s+\d\d?\s+\d{2}:\d{2}/))
-            return dateFns.parse(dateStr, 'MMM dd HH:mm', new Date());
+        // If the date looks like MMM dd HH:mm (assuming date is UTC)
+        if (dateStr.match(/\w{3}\s+\d\d?\s+\d{2}:\d{2}/)) {
+            let now = new Date();
+            let date = dateFns.parse(dateStr + 'Z', 'MMM dd HH:mmX', now);
+
+            // If the date is in the future (by more than an hour) it was likely modified last year
+            // i.e. Modified "Dec 28 21:07" but now is 1/1/2025 - The file wqs actually 12/28/2024 not 12/28/2025
+            if (date.getTime() > now.getTime()+3600000)
+                date = dateFns.addYears(date, -1);
+
+            return date;
+        }
 
         this.logger.warn(`Unknown date format: ${dateStr}`);
         return null;

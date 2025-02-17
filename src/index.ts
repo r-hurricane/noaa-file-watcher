@@ -21,7 +21,7 @@ import {IpcController} from "./notifications/ipcSocket.js";
         // Create an instance of each watcher
         const watchers : Array<Watcher> = config.watchers
             .flatMap(w => w.paths
-                .map(p => new Watcher(database, w, p)));
+                .map(p => new Watcher(database, ipcController, w, p)));
 
         // On sigterm, call shutdown
         const shutdown = (signal: string) => {

@@ -3,12 +3,12 @@ import * as dateFns from 'date-fns';
 import fs from "node:fs";
 import {IFileInfo} from "../services/fileService.js";
 import nodePath from "node:path";
-import {ParserBase} from "./parser.js";
+import {IParserResult, ParserBase} from "./parser.js";
+import {parseWmo} from "@r-hurricane/wmo-parser";
 import {WmoFile} from "@r-hurricane/wmo-parser/dist/WmoFile.js";
 
 // @ts-ignore
 import shpjs from 'shpjs';
-import {parseWmo} from "@r-hurricane/wmo-parser";
 
 export class ShapeParser extends ParserBase {
 
@@ -16,7 +16,9 @@ export class ShapeParser extends ParserBase {
         super('SHAPE');
     }
 
-    public override async parse(file: IFileInfo, savePath: string, contents: Uint8Array<ArrayBufferLike>): Promise<string | null> {
+    public override async parse(file: IFileInfo, savePath: string, contents: Uint8Array<ArrayBufferLike>)
+        : Promise<IParserResult>
+    {
 
         // Parse the Shape zip file
         this.logger.debug('Starting to parse Shape contents');
@@ -38,7 +40,7 @@ export class ShapeParser extends ParserBase {
         fs.writeFileSync(saveJsonPath, jsonContents);
         this.logger.debug(`Saved JSON to filesystem at ${saveJsonPath}`);
 
-        return file.lastModified?.toUTCString() ?? null;
+        return { code: `TWO.${file.lastModified?.toUTCString() ?? new Date().toUTCString()}`, json: geojson };
     }
 
     private async extractTwoText(contents: Uint8Array<ArrayBufferLike>, date: Date): Promise<object> {
