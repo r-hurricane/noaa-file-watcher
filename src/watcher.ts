@@ -1,10 +1,13 @@
-﻿import {ConfigPath, ConfigWatcher} from "./config.js";
+﻿import {config, ConfigPath, ConfigWatcher} from "./config.js";
 import createLogger from "./logging.js";
-import {FileDatabase} from "./database/database.js";
+import * as dateFns from 'date-fns';
+import {FileDatabase, INoaaFileModel} from "./database/database.js";
+import fs from "fs";
 import {FtpFileService} from "./services/ftpFileService.js";
-import {Logger} from 'winston';
 import {HttpFileService} from "./services/httpFileService.js";
-import {IFileService} from "./services/fileService.js";
+import {IFileInfo, IFileService} from "./services/fileService.js";
+import {Logger} from 'winston';
+import nodePath from "node:path";
 
 export class Watcher {
 
@@ -21,7 +24,7 @@ export class Watcher {
         this.database = database;
         this.watcherConfig = watcherConfig;
         this.pathConfig = pathConfig;
-        this.baseUrl = new URL(pathConfig.path, watcherConfig.baseUrl);
+        this.baseUrl = new URL(nodePath.normalize(nodePath.join(watcherConfig.baseUrl, pathConfig.path)));
         this.logger = createLogger(`Watcher (${this.baseUrl})`);
 
         this.schedule();
@@ -29,7 +32,7 @@ export class Watcher {
 
     private schedule() : void {
         setImmediate(async () => { await this.watch(); });
-        this.timeout = setTimeout(this.schedule.bind(this), this.getFrequency() * 1000);
+        this.timeout = setTimeout(this.schedule.bind(this), this.getFrequency() * 60000);
     }
 
     private getFrequency() : number {
@@ -51,19 +54,16 @@ export class Watcher {
 
             // Query the database for the same files found
             const dbLatest = this.database.getAllLatest(files);
-            this.logger.info(dbLatest.size);
-            files.forEach(f => this.logger.info(f.url.href));
-            files.forEach(f => this.database.insertFile({
-                    id: null,
-                    href: f.url.href,
-                    code: null,
-                    modifiedOn: f.lastModified?.getTime() ?? null,
-                    savePath: f.url.pathname
-                }));
-            //const fileContents = await fileService.downloadFile(files[0].path);
-            //this.logger.info(fileContents);
-            //this.logger.info(this.database.getLatest(`${this.watcher.type}://${this.watcher.host}/atcf/btk/bep032024.dat`)?.toString() ?? 'Not Found');
-            //this.logger.info(this.database.getLatest(`${this.watcher.type}://${this.watcher.host}/atcf/btk/bep032024.dat`, "test")?.toString() ?? 'Not Found');
+
+            // For each file listing, check if an update is needed
+            for (const f of files) {
+                try {
+                    await this.checkFile(f, dbLatest, fileService);
+                } catch(error) {
+                    this.logger.error(error);
+                }
+            }
+
         } catch(error) {
             this.logger.error(error);
         }
@@ -81,6 +81,69 @@ export class Watcher {
             default:
                 throw new Error('Unknown file service type ' + urlScheme);
         }
+    }
+
+    private async checkFile(file: IFileInfo, dbLatest: Map<string, INoaaFileModel | null>, fileService: IFileService) {
+        this.logger.debug(`Checking file ${file}`);
+
+        // See if exists in database
+        const dbEntry = dbLatest.get(file.url.href);
+        if (dbEntry) {
+            this.logger.debug(`Found existing entry in database: ${dbEntry}`);
+
+            // If the last modified matches, continue to the next file
+            if (dbEntry.modifiedOn === file.lastModified?.getTime()) {
+                this.logger.debug("Existing database modifiedOn matches source lastModified datetime.");
+                return;
+            }
+
+            this.logger.debug("Existing database modifiedOn does not match source lastModified datetime.");
+        } else {
+            this.logger.debug("No existing database entry found.");
+        }
+
+        // Log message about new file available
+        this.logger.info(`New version of ${file} detected`);
+
+        // Fetch the contents of the new file
+        const fileContents = await fileService.downloadFile(file.url.pathname);
+
+        // Check not null
+        if (!fileContents) {
+            this.logger.error(`Failed to download the contents of ${file}`);
+            // TODO: Send notifications
+            return;
+        }
+
+        // Get the save file path
+        const modifiedDate = file.lastModified ?? new Date();
+        const pathDate = dateFns.format(modifiedDate, 'yyyy\'/\'MM');
+        const saveDir = nodePath.join(config.dataPath, pathDate, nodePath.dirname(file.url.pathname));
+        const fileDate = dateFns.format(modifiedDate, 'dd-HHmm');
+        const savePath = nodePath.join(saveDir, `${fileDate}-${nodePath.basename(file.url.pathname)}`);
+
+        // Check folder exists
+        if (!fs.existsSync(saveDir)) {
+            this.logger.debug('Creating save directory: ' + saveDir);
+            fs.mkdirSync(saveDir, { recursive: true });
+        }
+
+        // Write raw text to text file
+        this.logger.debug(`Saving new file to file system: ${savePath}`);
+        fs.writeFileSync(savePath, fileContents);
+
+        // Save the new entry to the database for the next check
+        this.database.insertFile({
+            id: null,
+            href: file.url.href,
+            code: null,
+            modifiedOn: file.lastModified?.getTime() ?? null,
+            savePath: savePath
+        });
+
+        // TODO: Run parser if specified
+        if (!this.pathConfig.parser || this.pathConfig.parser.toLowerCase() === 'none')
+            return;
     }
 
     public async shutdown() : Promise<boolean> {

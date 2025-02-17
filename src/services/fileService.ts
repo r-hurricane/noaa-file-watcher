@@ -41,14 +41,14 @@ export abstract class FileServiceBase implements IFileService {
         this.pathConfig = pathConfig;
 
         const watcherUrl = new URL(watcherConfig.baseUrl);
-        let fullPath = watcherUrl.pathname + '/' + pathConfig.path;
+        let fullPath = nodePath.join(watcherUrl.pathname, pathConfig.path);
 
         if (this.pathConfig.literal) {
 
             if (this.pathConfig.files.length !== 1)
                 throw new Error('Literal path can only be used with one file.');
 
-            fullPath += '/' + this.pathConfig.files[0];
+            fullPath = nodePath.join(fullPath, this.pathConfig.files[0]);
         }
 
         this.baseUrl = new URL(nodePath.normalize(fullPath), watcherUrl);

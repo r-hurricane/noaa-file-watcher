@@ -20,7 +20,7 @@ export interface ConfigNotifications {
 
 export interface ConfigPath {
     path: string,
-    parser: string,
+    parser: string | null,
     freq: number | null,
     freqFunc: string | null,
     literal: boolean | null,
