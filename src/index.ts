@@ -1,8 +1,7 @@
-﻿import { config } from './config.js';
-import { FileDatabase } from "./database/database.js";
+﻿import {config} from './config.js';
+import {FileDatabase} from "./database/database.js";
 import createLogger from './logging.js';
-import watcherTypes from "./watchers/index.js";
-import {Watcher} from "./watchers/watcher.js";
+import {Watcher} from "./watcher.js";
 
 const logger = createLogger('Index');
 
@@ -13,7 +12,8 @@ try {
 
     // Create an instance of each watcher
     const watchers : Array<Watcher> = config.watchers
-        .map(w => new watcherTypes[w.type](database, w));
+        .flatMap(w => w.paths
+            .map(p => new Watcher(database, w, p)));
 
     // On sigterm, call shutdown
     const shutdown = () => {

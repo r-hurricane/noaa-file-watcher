@@ -4,4 +4,3 @@ dist/
 logs/
 data/
 node_modules/
-*.db

@@ -1,12 +1,12 @@
-﻿import { config } from '../config.js';
+﻿import {config} from '../config.js';
 import createLogger from "../logging.js";
-
-const logger = createLogger('Discord');
-const discordConfig = config.notifications.discord;
 
 export class DiscordNotifier {
 
     public static Send(content : string) {
+
+        const logger = createLogger('Discord');
+        const discordConfig = config.notifications.discord;
 
         // If no configured discord messages, skip
         if (discordConfig == null)

@@ -1,5 +1,5 @@
-﻿import { config } from './config.js';
-import { createLogger, format, transports } from "winston";
+﻿import {config} from './config.js';
+import {createLogger, format, transports} from "winston";
 import 'winston-daily-rotate-file';
 
 const printf = (padLength : number) => {

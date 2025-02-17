@@ -1,19 +1,21 @@
 ﻿// noinspection SqlNoDataSourceInspection
 
-import { config } from '../config.js';
-import fs from "fs";
+import {config} from '../config.js';
 import createLogger from "../logging.js";
-import { DatabaseSync } from 'node:sqlite';
-
-const logger = createLogger('Database');
+import {DatabaseSync} from 'node:sqlite';
+import fs from "fs";
+import {Logger} from "winston";
 
 export class FileDatabase {
 
     private readonly handle: DatabaseSync;
+    private readonly logger: Logger;
 
-    constructor() {
+    public constructor() {
+        this.logger = createLogger('Database');
+
         const filePath = config.databaseFile;
-        logger.debug(`Opening database: ${filePath}`);
+        this.logger.debug(`Opening database: ${filePath}`);
 
         const dbExists = fs.existsSync(filePath);
         this.handle = new DatabaseSync(filePath);
@@ -24,7 +26,7 @@ export class FileDatabase {
         if (dbExists)
             return;
 
-        logger.debug('Creating new database schema.');
+        this.logger.debug('Creating new database schema.');
         this.handle.exec(`CREATE TABLE FILE(
             id INTEGER PRIMARY KEY AUTOINCREMENT,
             issued INTEGER,
