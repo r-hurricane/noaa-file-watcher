@@ -1,9 +1,9 @@
 ﻿import {config} from './config.js';
 import {createLogger} from './logging.js';
-import {FileDatabase} from "./database/database.js";
 import {Watcher} from "./watcher.js";
 import {DiscordNotifier} from "./notifications/discord.js";
 import {IpcController} from "./notifications/ipcSocket.js";
+import {PostgreFileDatabase} from "./database/postgreFileDatabase.js";
 
 (async () => {
     const logger = createLogger('Index');
@@ -13,10 +13,11 @@ import {IpcController} from "./notifications/ipcSocket.js";
         logger.info("Starting NOAA File Watcher");
 
         // Create database
-        const database = new FileDatabase();
+        const database = new PostgreFileDatabase();
+        await database.connect();
 
         // Create IPC Controller
-        const ipcController = new IpcController();
+        const ipcController = await IpcController.Start();
 
         // Create an instance of each watcher
         const watchers : Array<Watcher> = config.watchers

@@ -2,7 +2,7 @@
 import {createLogger} from "./logging.js";
 import * as dateFns from 'date-fns';
 import {DiscordNotifier} from "./notifications/discord.js";
-import {FileDatabase, INoaaFileModel} from "./database/database.js";
+import {FileDatabase, INoaaFileModel} from "./database/fileDatabase.js";
 import fs from "node:fs";
 import {FtpFileService} from "./services/ftpFileService.js";
 import {HttpFileService} from "./services/httpFileService.js";
@@ -59,7 +59,7 @@ export class Watcher {
             const files = await fileService.listFiles();
 
             // Query the database for the same files found
-            const dbLatest = this.database.getAllLatest(files);
+            const dbLatest = await this.database.getAllLatest(files);
 
             // For each file listing, check if an update is needed
             for (const f of files) {
@@ -99,15 +99,15 @@ export class Watcher {
         // See if exists in database
         const dbEntry = dbLatest.get(file.url.href);
         if (dbEntry) {
-            this.logger.debug(`Found existing entry in database: ${dbEntry}`);
+            this.logger.debug(`DB: ${dbEntry} | File: ${JSON.stringify(file)}`)
 
             // If the last modified matches, continue to the next file
-            if (dbEntry.modifiedOn === file.lastModified?.getTime()) {
-                this.logger.debug("Existing database modifiedOn matches source lastModified datetime.");
+            if (dbEntry.modified_on === file.lastModified?.getTime().toString()) {
+                this.logger.debug(`Existing database modifiedOn ${dbEntry.modified_on} matches source lastModified datetime ${file.lastModified?.getTime()}.`);
                 return;
             }
 
-            this.logger.debug("Existing database modifiedOn does not match source lastModified datetime.");
+            this.logger.debug(`Existing database modifiedOn ${dbEntry.modified_on} does not match source lastModified datetime ${file.lastModified?.getTime()}.`);
         } else {
             this.logger.debug("No existing database entry found.");
         }
@@ -152,11 +152,11 @@ export class Watcher {
         }
 
         // Save the new entry to the database for the next check
-        this.database.insertFile({
+        await this.database.insertFile({
             id: null,
             href: file.url.href,
             code: parseResult?.code ?? null,
-            modifiedOn: file.lastModified?.getTime() ?? null,
+            modified_on: file.lastModified?.getTime().toString() ?? null,
             savePath: savePath
         });
 

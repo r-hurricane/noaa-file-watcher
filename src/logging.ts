@@ -19,6 +19,40 @@ const printf = (padLength: number) => {
     })
 };
 
+const consoleTransport = new transports.Console({
+    handleExceptions: true,
+    format: format.combine(
+        format.colorize({all: true}),
+        printf(15)
+    )
+});
+
+const fileTransport = new transports.DailyRotateFile({
+    handleExceptions: true,
+    dirname: 'logs',
+    filename: 'wmo-fetch-%DATE%.log',
+    format: printf(5),
+    datePattern: 'YYYY-MM-DD',
+    maxSize: '20m',
+    maxFiles: '14d'
+});
+
+const logger = winCreateLogger({
+    level: config.logLevel,
+    defaultMeta: {service: 'wmo-fetch'},
+    format: format.combine(
+        format.errors({stack: true, cause: true}),
+        format.timestamp({
+            format: 'YYYY-MM-DD HH:mm:ss'
+        }),
+        format.splat(),
+    ),
+    transports: [
+        consoleTransport,
+        fileTransport
+    ]
+});
+
 export const errorTrace = (error: unknown)=> {
     if (!(error instanceof Error))
         return `${error}`;
@@ -37,40 +71,5 @@ export const errorTrace = (error: unknown)=> {
 }
 
 export const createLogger = (label: string)=> {
-
-    const consoleTransport = new transports.Console({
-        handleExceptions: true,
-        format: format.combine(
-            format.colorize({all: true}),
-            printf(15)
-        )
-    });
-
-    const fileTransport = new transports.DailyRotateFile({
-        handleExceptions: true,
-        dirname: 'logs',
-        filename: 'wmo-fetch-%DATE%.log',
-        format: printf(5),
-        datePattern: 'YYYY-MM-DD',
-        maxSize: '20m',
-        maxFiles: '14d'
-    });
-    fileTransport.setMaxListeners(30);
-
-    return winCreateLogger({
-        level: config.logLevel,
-        defaultMeta: {service: 'wmo-fetch'},
-        format: format.combine(
-            format.errors({stack: true, cause: true}),
-            format.label({label: label}),
-            format.timestamp({
-                format: 'YYYY-MM-DD HH:mm:ss'
-            }),
-            format.splat(),
-        ),
-        transports: [
-            consoleTransport,
-            fileTransport
-        ]
-    });
+    return logger.child({label});
 }

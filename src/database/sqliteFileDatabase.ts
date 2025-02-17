@@ -7,16 +7,22 @@ import fs from "fs";
 import {Logger} from "winston";
 import path from "node:path";
 import {IFileInfo} from "../services/fileService.js";
+import {INoaaFileModel, NoaaFileModel, FileDatabase} from "./fileDatabase.js";
 
-export class FileDatabase {
+export class SqliteFileDatabase extends FileDatabase {
 
-    private readonly handle: DatabaseSync;
     private readonly logger: Logger;
+    private handle: DatabaseSync | null = null;
 
     public constructor() {
-        this.logger = createLogger('Database');
+        super();
 
-        const filePath = config.databaseFile;
+        this.logger = createLogger('Database');
+    }
+
+    public override async connect(): Promise<void> {
+
+        const filePath = config.database;
         this.logger.verbose(`Opening database: ${filePath}`);
 
         const dbExists = fs.existsSync(filePath);
@@ -38,21 +44,22 @@ export class FileDatabase {
             id INTEGER PRIMARY KEY AUTOINCREMENT,
             href TEXT,
             code TEXT,
-            modifiedOn INTEGER,
+            modified_on INTEGER,
             savePath TEXT
         );`);
         this.handle.exec(`CREATE INDEX UX_NoaaFile_href ON NoaaFile(href);`);
         this.handle.exec(`CREATE INDEX UX_NoaaFile_code ON NoaaFile(code);`);
-        this.handle.exec(`CREATE INDEX UX_NoaaFile_modifiedOn ON NoaaFile(modifiedOn);`);
-        this.handle.exec(`CREATE UNIQUE INDEX UX_NoaaFile_href_modifiedOn ON NoaaFile(href, modifiedOn);`);
+        this.handle.exec(`CREATE INDEX UX_NoaaFile_modified_on ON NoaaFile(modified_on);`);
+        this.handle.exec(`CREATE UNIQUE INDEX UX_NoaaFile_href_modified_on ON NoaaFile(href, modified_on);`);
     }
 
-    public getAllLatest(files: Array<IFileInfo>): Map<string, NoaaFileModel | null> {
+    public override async getAllLatest(files: Array<IFileInfo>): Promise<Map<string, NoaaFileModel | null>> {
+        if (!this.handle) throw new Error("Not connected");
         const select = this.handle.prepare(`
-            SELECT id, href, code, modifiedOn, savePath
+            SELECT id, href, code, modified_on, savePath
             FROM NoaaFile
             WHERE href=@href
-            ORDER BY modifiedOn DESC LIMIT 1
+            ORDER BY modified_on DESC LIMIT 1
         `);
 
         const result = new Map<string, NoaaFileModel | null>();
@@ -64,38 +71,14 @@ export class FileDatabase {
         return result;
     }
 
-    public insertFile(file: INoaaFileModel) {
-        this.handle.prepare(`INSERT INTO NoaaFile(href, code, modifiedOn, savePath) VALUES (@href, @code, @modifiedOn, @savePath)`)
-            .run({href: file.href, code: file.code, modifiedOn: file.modifiedOn, savePath: file.savePath});
+    public override async insertFile(file: INoaaFileModel): Promise<void> {
+        if (!this.handle) throw new Error("Not connected");
+        this.handle.prepare(`INSERT INTO NoaaFile(href, code, modified_on, savePath) VALUES (@href, @code, @modified_on, @savePath)`)
+            .run({href: file.href, code: file.code, modified_on: file.modified_on, savePath: file.savePath});
     }
 
-}
+    public override async end(): Promise<void> {
 
-export interface INoaaFileModel {
-    id: number | null;
-    href: string | null;
-    code: string | null;
-    modifiedOn: number | null;
-    savePath: string | null;
-}
-
-export class NoaaFileModel implements INoaaFileModel {
-    public id: number | null = null;
-    public href: string | null = null;
-    public code: string | null = null;
-    public modifiedOn: number | null = null;
-    public savePath: string | null = null;
-
-    public constructor(param: INoaaFileModel)
-    {
-        this.id = param?.id ?? null;
-        this.href = param?.href ?? null;
-        this.code = param?.code ?? null;
-        this.modifiedOn = param?.modifiedOn ?? null;
-        this.savePath = param?.savePath ?? null;
     }
 
-    public toString(): string {
-        return `NoaaFile(id=${this.id}, href=${this.href}, code=${this.code}, modifiedOn=${this.modifiedOn}, savePath=${this.savePath})`;
-    }
 }

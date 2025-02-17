@@ -3,6 +3,7 @@ import {createLogger} from "../logging.js";
 import {Logger} from "winston";
 import {createServer, Server, Socket} from "node:net";
 import * as fs from 'node:fs';
+import path from "node:path";
 
 export class IpcController {
 
@@ -11,8 +12,21 @@ export class IpcController {
 
     private clientList: Socket[] = [];
 
-    constructor() {
+    public static Start(): Promise<IpcController> {
+        return new Promise<IpcController>((res, _rej) => {
+            const inst = new IpcController(() => {
+               res(inst);
+            });
+        });
+    }
+
+    constructor(cb: () => void) {
         this.logger = createLogger('IpcController');
+
+        // Ensure the dir is created
+        const dirName = path.dirname(config.ipcPath);
+        if (!fs.existsSync(dirName))
+            fs.mkdirSync(dirName, { recursive: true});
 
         // Confirm path does not exist. Try and delete if it does.
         if (fs.existsSync(config.ipcPath)) {
@@ -45,15 +59,22 @@ export class IpcController {
             });
         });
 
+        // Add error handler
+        this.server.on('error', err => {
+            this.logger.error(err);
+            throw err;
+        });
+
         // Listen on path
         this.server.listen(config.ipcPath, () => {
             this.logger.info(`IPC server listening on ${config.ipcPath}`);
+            cb();
         });
     }
 
     public broadcast(cmd: string, data?: object | null): Promise<void[]> {
         const message = JSON.stringify({ cmd, data });
-        this.logger.debug(`Sending data to socket: ${message}`);
+        this.logger.debug(`Sending data to IPC Channel: ${message}`);
         return Promise.all(this.clientList
             .map(c => new Promise<void>((res) => {
                 c.cork();

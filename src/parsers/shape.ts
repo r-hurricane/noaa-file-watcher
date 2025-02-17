@@ -40,7 +40,7 @@ export class ShapeParser extends ParserBase {
         fs.writeFileSync(saveJsonPath, jsonContents);
         this.logger.debug(`Saved JSON to filesystem at ${saveJsonPath}`);
 
-        return { code: `TWO.${file.lastModified?.toUTCString() ?? new Date().toUTCString()}`, json: geojson };
+        return { code: `TWO.${file.lastModified?.toISOString() ?? new Date().toISOString()}`, json: geojson };
     }
 
     private async extractTwoText(contents: Uint8Array<ArrayBufferLike>, date: Date): Promise<object> {
