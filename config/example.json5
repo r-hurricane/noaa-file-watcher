@@ -1,0 +1,62 @@
+{
+	"logLevel": "info",
+	"databaseFile": "./data/noaa.db",
+	"dataPath": "./data/files",
+	"notifications": {
+		"email": {
+			"mock": true,
+			"from": "<file-alerts@somedomain.com>",
+			"to": "<to-someone@email.com>",
+			"sendgridKey": "<enter-key-here>"
+		},
+		"discord": {
+			"mock": true,
+			"users": {
+				"<username>": "<userid>"
+			},
+			"webhooks": [
+				"<Discord-Webhook-URL>"
+			]
+		}
+	},
+	"watchers": [
+		{
+			"type": "ftp",
+			"host": "tgftp.nws.noaa.gov",
+			"base": "/data/raw",
+			"freq": 60,
+			"paths": [
+				{
+					"path": "/no",
+					"parser": "wmo",
+					"files": [
+						"nous42.knhc.rep.rpd.txt"
+					]
+				},
+				{
+					"path": "/ur",
+					"parser": "wmo",
+					"freqFunc": "activeRecon",
+					"files": [
+						"ur(nt|pn|pa)\\d+\\.k(nhc|wbc|bix).*\\.txt"
+					]
+				}
+			]
+		},
+		{
+			"type": "ftp",
+			"host": "ftp.nhc.noaa.gov",
+			"base": "/",
+			"freq": 60,
+			"paths": [
+				{
+					"path": "/atcf/btk/",
+					"parser": "atcf",
+					"files": [
+						".*\\.dat"
+					]
+				}
+			]
+		}
+	]
+}

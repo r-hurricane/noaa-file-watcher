@@ -1,0 +1,26 @@
+{
+  "name": "noaa-file-watcher",
+  "version": "1.0.0",
+  "description": "Watches for changes to data files, parses them, and stores them for future use.",
+  "main": "dist/index.js",
+  "type": "module",
+  "scripts": {
+    "build": "npx tsc -p tsconfig.json",
+    "test": "npm run build && node --experimental-sqlite dist/index.js"
+  },
+  "author": "u/Beach-Brews",
+  "license": "MIT",
+  "devDependencies": {
+    "@types/config": "^3.3.5",
+    "@types/node": "^22.10.1",
+    "typescript": "^5.7.2"
+  },
+  "dependencies": {
+    "@sendgrid/mail": "^8.1.4",
+    "@types/winston": "^2.4.4",
+    "basic-ftp": "^5.0.5",
+    "config": "^3.3.12",
+    "winston": "^3.17.0",
+    "winston-daily-rotate-file": "^5.0.0"
+  }
+}
