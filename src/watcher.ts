@@ -1,6 +1,7 @@
 ﻿import {config, ConfigPath, ConfigWatcher} from "./config.js";
 import {createLogger} from "./logging.js";
 import * as dateFns from 'date-fns';
+import {DiscordNotifier} from "./notifications/discord.js";
 import {FileDatabase, INoaaFileModel} from "./database/database.js";
 import fs from "node:fs";
 import {FtpFileService} from "./services/ftpFileService.js";
@@ -8,7 +9,7 @@ import {HttpFileService} from "./services/httpFileService.js";
 import {IFileInfo, IFileService} from "./services/fileService.js";
 import {Logger} from 'winston';
 import nodePath from "node:path";
-import {DiscordNotifier} from "./notifications/discord.js";
+import {parsers} from './parsers/index.js';
 
 export class Watcher {
 
@@ -89,7 +90,7 @@ export class Watcher {
     }
 
     private async checkFile(file: IFileInfo, dbLatest: Map<string, INoaaFileModel | null>, fileService: IFileService) {
-        this.logger.debug(`Checking file ${file}`);
+        this.logger.verbose(`Checking file ${file}`);
 
         // See if exists in database
         const dbEntry = dbLatest.get(file.url.href);
@@ -129,30 +130,35 @@ export class Watcher {
 
         // Check folder exists
         if (!fs.existsSync(saveDir)) {
-            this.logger.debug('Creating save directory: ' + saveDir);
+            this.logger.info('Creating save directory: ' + saveDir);
             fs.mkdirSync(saveDir, { recursive: true });
         }
 
         // Write raw text to text file
-        this.logger.debug(`Saving new file to file system: ${savePath}`);
+        this.logger.verbose(`Saving new file to file system: ${savePath}`);
         fs.writeFileSync(savePath, fileContents);
+
+        // TODO: Run parser if specified
+        let code: string | null = null;
+        if (this.pathConfig.parser && this.pathConfig.parser.toLowerCase() !== 'none') {
+            const parser = parsers.get(this.pathConfig.parser.toLowerCase());
+            if (!parser)
+                throw new Error(`Unknown parser type ${(this.pathConfig.parser)}`);
+            code = parser.parse(file, savePath, fileContents);
+        }
 
         // Save the new entry to the database for the next check
         this.database.insertFile({
             id: null,
             href: file.url.href,
-            code: null,
+            code: code,
             modifiedOn: file.lastModified?.getTime() ?? null,
             savePath: savePath
         });
-
-        // TODO: Run parser if specified
-        if (!this.pathConfig.parser || this.pathConfig.parser.toLowerCase() === 'none')
-            return;
     }
 
     public async shutdown() : Promise<boolean> {
-        this.logger.debug('Received shutdown signal.');
+        this.logger.verbose('Received shutdown signal.');
 
         if (this.timeout) {
             clearTimeout(this.timeout);
@@ -161,7 +167,7 @@ export class Watcher {
 
         let attempt = 0;
         while (this.running && ++attempt <= 5) {
-            this.logger.debug('Currently processing a watch. Waiting 1 second.');
+            this.logger.info('Currently processing a watch. Waiting 1 second.');
             await new Promise(resolve => setTimeout(resolve, 1000));
         }
 

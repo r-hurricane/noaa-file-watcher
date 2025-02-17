@@ -42,6 +42,7 @@ export class FtpFileService extends FileServiceBase {
         this.logger.debug(`Starting to download file contents from FTP: ${downloadPath}`);
         await this.client.downloadTo(myStream, downloadPath);
         this.logger.debug(`Finished downloading file contents from FTP: ${downloadPath}`);
+        if (this.logger.isSillyEnabled()) this.logger.silly(Buffer.concat(chunks).toString());
         return Buffer.concat(chunks).toString();
     }
 

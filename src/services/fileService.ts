@@ -54,7 +54,7 @@ export abstract class FileServiceBase implements IFileService {
         this.baseUrl = new URL(nodePath.normalize(fullPath), watcherUrl);
         this.logger = createLogger(`${label}FileService (${this.baseUrl})`);
 
-        this.logger.debug(`Setup filesystem with baseUrl: ${this.baseUrl}`);
+        this.logger.verbose(`Setup filesystem with baseUrl: ${this.baseUrl}`);
     }
 
     public abstract listFiles(): Promise<Array<FileInfo>>;

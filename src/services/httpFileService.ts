@@ -28,7 +28,9 @@ export class HttpFileService extends FileServiceBase {
         this.logger.debug(`Downloading file contents ${file}`);
         const response = await this.fetchFile(this.normalizeFilePath(file), false);
         this.logger.debug(`Received file contents ${file}`);
-        return response.text();
+        const text = response.text();
+        if (this.logger.isSillyEnabled()) this.logger.silly(text);
+        return text;
     }
 
     private async fetchFile(url: URL, headOnly: boolean): Promise<Response> {

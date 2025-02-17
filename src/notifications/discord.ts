@@ -3,6 +3,7 @@ import {createLogger, errorTrace} from "../logging.js";
 
 export class DiscordNotifier {
 
+    // TODO: Add a channel name to configs + send method (i.e. channel for errors vs ATCF vs TWO vs Recon, etc)
     public static async Send(content: string, error: unknown = null) {
 
         const logger = createLogger('Discord');

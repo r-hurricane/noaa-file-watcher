@@ -16,6 +16,7 @@
     "typescript": "^5.7.2"
   },
   "dependencies": {
+    "@r-hurricane/wmo-parser": "1.0.0-alpha.1",
     "@sendgrid/mail": "^8.1.4",
     "basic-ftp": "^5.0.5",
     "config": "^3.3.12",

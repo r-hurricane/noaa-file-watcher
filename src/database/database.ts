@@ -17,7 +17,7 @@ export class FileDatabase {
         this.logger = createLogger('Database');
 
         const filePath = config.databaseFile;
-        this.logger.debug(`Opening database: ${filePath}`);
+        this.logger.verbose(`Opening database: ${filePath}`);
 
         const dbExists = fs.existsSync(filePath);
 
@@ -33,7 +33,7 @@ export class FileDatabase {
         if (dbExists)
             return;
 
-        this.logger.debug('Creating new database schema.');
+        this.logger.info('Creating new database schema.');
         this.handle.exec(`CREATE TABLE NoaaFile(
             id INTEGER PRIMARY KEY AUTOINCREMENT,
             href TEXT,
