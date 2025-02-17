@@ -144,7 +144,7 @@ export class Watcher {
             const parser = parsers.get(this.pathConfig.parser.toLowerCase());
             if (!parser)
                 throw new Error(`Unknown parser type ${(this.pathConfig.parser)}`);
-            code = parser.parse(file, savePath, fileContents);
+            code = await parser.parse(file, savePath, fileContents);
         }
 
         // Save the new entry to the database for the next check

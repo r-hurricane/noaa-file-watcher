@@ -3,7 +3,7 @@ import {IFileInfo} from "../services/fileService.js";
 import {Logger} from "winston";
 
 export interface IParser {
-    parse(file: IFileInfo, savePath: string, contents: string): string | null;
+    parse(file: IFileInfo, savePath: string, contents: Uint8Array<ArrayBufferLike>): Promise<string | null>;
 }
 
 export abstract class ParserBase implements IParser {
@@ -13,5 +13,5 @@ export abstract class ParserBase implements IParser {
         this.logger = createLogger(`${label}Parser`);
     }
 
-    public abstract parse(file: IFileInfo, savePath: string, contents: string): string | null;
+    public abstract parse(file: IFileInfo, savePath: string, contents: Uint8Array<ArrayBufferLike>): Promise<string | null>;
 }

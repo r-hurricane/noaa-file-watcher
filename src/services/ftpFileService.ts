@@ -29,8 +29,8 @@ export class FtpFileService extends FileServiceBase {
             );
     }
 
-    public override async downloadFile(file: string): Promise<string | null> {
-        const chunks: Array<Buffer> = [];
+    public override async downloadFile(file: string): Promise<Uint8Array<ArrayBufferLike> | null> {
+        const chunks: Uint8Array<ArrayBufferLike>[] = [];
         const myStream = new Writable({
             write(chunk, _, callback) {
                 chunks.push(chunk);
@@ -42,8 +42,9 @@ export class FtpFileService extends FileServiceBase {
         this.logger.debug(`Starting to download file contents from FTP: ${downloadPath}`);
         await this.client.downloadTo(myStream, downloadPath);
         this.logger.debug(`Finished downloading file contents from FTP: ${downloadPath}`);
-        if (this.logger.isSillyEnabled()) this.logger.silly(Buffer.concat(chunks).toString());
-        return Buffer.concat(chunks).toString();
+        const result = Buffer.concat(chunks);
+        if (this.logger.isSillyEnabled()) this.logger.silly(result.toString());
+        return result;
     }
 
     private parseDate(dateStr: string): Date | null {

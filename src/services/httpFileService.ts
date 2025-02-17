@@ -24,13 +24,13 @@ export class HttpFileService extends FileServiceBase {
         return fileInfos;
     }
 
-    public override async downloadFile(file: string): Promise<string | null> {
+    public override async downloadFile(file: string): Promise<Uint8Array<ArrayBufferLike> | null> {
         this.logger.debug(`Downloading file contents ${file}`);
         const response = await this.fetchFile(this.normalizeFilePath(file), false);
         this.logger.debug(`Received file contents ${file}`);
-        const text = response.text();
-        if (this.logger.isSillyEnabled()) this.logger.silly(text);
-        return text;
+        if (this.logger.isSillyEnabled()) this.logger.silly(await response.text());
+        const blob = await response.blob();
+        return await blob.bytes();
     }
 
     private async fetchFile(url: URL, headOnly: boolean): Promise<Response> {

@@ -11,11 +11,11 @@ export class WmoParser extends ParserBase {
         super('WMO');
     }
 
-    public override parse(file: IFileInfo, savePath: string, fileContents: string): string | null {
+    public override async parse(file: IFileInfo, savePath: string, fileContents: Uint8Array<ArrayBufferLike>): Promise<string | null> {
         // Parse the WMO
         this.logger.debug('Starting to parse WMO contents');
         if (this.logger.isSillyEnabled()) this.logger.silly(fileContents);
-        const parsedWmo = parseWmo(fileContents, { dateCtx: file.lastModified  });
+        const parsedWmo = parseWmo(fileContents.toString(), { dateCtx: file.lastModified  });
         const jsonContents = JSON.stringify(parsedWmo);
         this.logger.debug(`Parsed WMO ${parsedWmo.header?.designator}.${parsedWmo.header?.station}`);
         if (this.logger.isSillyEnabled()) this.logger.silly(jsonContents);

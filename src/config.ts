@@ -38,6 +38,7 @@ export interface ConfigApp {
     logLevel: string,
     databaseFile: string,
     dataPath: string,
+    ipcPath: string,
     notifications: ConfigNotifications,
     watchers: Array<ConfigWatcher>
 }
@@ -46,6 +47,7 @@ export const config: ConfigApp = {
     logLevel: nodeConfig.get<string>('logLevel'),
     databaseFile: nodeConfig.get<string>('databaseFile'),
     dataPath: nodeConfig.get<string>('dataPath'),
+    ipcPath: nodeConfig.get<string>('ipcPath'),
     notifications: nodeConfig.get<ConfigNotifications>('notifications'),
-    watchers: nodeConfig.get<Array<ConfigWatcher>>('watchers'),
+    watchers: nodeConfig.get<Array<ConfigWatcher>>('watchers')
 };

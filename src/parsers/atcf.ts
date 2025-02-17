@@ -10,12 +10,12 @@ export class AtcfParser extends ParserBase {
         super('ATCF');
     }
 
-    public override parse(_file: IFileInfo, savePath: string, contents: string): string | null {
+    public override async parse(_file: IFileInfo, savePath: string, contents: Uint8Array<ArrayBufferLike>): Promise<string | null> {
 
         // Parse the ATCF text
         this.logger.debug('Starting to parse ATCF contents');
         if (this.logger.isSillyEnabled()) this.logger.silly(contents);
-        const atcfFile = parseAtcf(contents);
+        const atcfFile = parseAtcf(contents.toString());
 
         // Stringify
         const jsonContents = JSON.stringify(atcfFile);

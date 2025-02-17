@@ -3,6 +3,7 @@ import {createLogger} from './logging.js';
 import {FileDatabase} from "./database/database.js";
 import {Watcher} from "./watcher.js";
 import {DiscordNotifier} from "./notifications/discord.js";
+import {IpcController} from "./notifications/ipcSocket.js";
 
 (async () => {
     const logger = createLogger('Index');
@@ -13,6 +14,9 @@ import {DiscordNotifier} from "./notifications/discord.js";
 
         // Create database
         const database = new FileDatabase();
+
+        // Create IPC Controller
+        const ipcController = new IpcController();
 
         // Create an instance of each watcher
         const watchers : Array<Watcher> = config.watchers
@@ -25,7 +29,9 @@ import {DiscordNotifier} from "./notifications/discord.js";
 
             DiscordNotifier.Send(`# NOAA File Watcher Shutdown\n## Event: ${signal}\n<@beach> NOAA File Watcher has received a ${signal} and shutdown.`)
                 .then(() => {
-                    Promise.all(watchers.map(w => w.shutdown()))
+                    const promises = watchers.map(w => w.shutdown());
+                    promises.push(ipcController.shutdown());
+                    Promise.all(promises)
                         .then((v) => {
                             logger.info('Shutdown process complete. Goodbye!');
                             process.exit(v.every(r => r) ? 0 : 1);

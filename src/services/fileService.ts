@@ -27,7 +27,7 @@ export class FileInfo implements IFileInfo {
 
 export interface IFileService {
     listFiles: () => Promise<Array<FileInfo>>,
-    downloadFile: (file: string) => Promise<string | null>;
+    downloadFile: (file: string) => Promise<Uint8Array<ArrayBufferLike> | null>;
 }
 
 export abstract class FileServiceBase implements IFileService {
@@ -58,7 +58,7 @@ export abstract class FileServiceBase implements IFileService {
     }
 
     public abstract listFiles(): Promise<Array<FileInfo>>;
-    public abstract downloadFile(file: string): Promise<string | null>;
+    public abstract downloadFile(file: string): Promise<Uint8Array<ArrayBufferLike> | null>;
 
     protected normalizeFilePath(file: string): URL {
         const appendPath = file.startsWith(this.baseUrl.pathname)
