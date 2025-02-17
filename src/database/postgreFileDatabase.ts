@@ -5,7 +5,7 @@ import {createLogger} from "../logging.js";
 import {Logger} from "winston";
 import {IFileInfo} from "../services/fileService.js";
 import {INoaaFileModel, NoaaFileModel, FileDatabase} from "./fileDatabase.js";
-import pg from 'pg';
+import pg, {PoolClient} from 'pg';
 const {Pool} = pg;
 
 export class PostgreFileDatabase extends FileDatabase {
@@ -16,11 +16,15 @@ export class PostgreFileDatabase extends FileDatabase {
     public constructor() {
         super();
 
-        this.logger = createLogger('Postgre');
+        const logger = createLogger('Postgre');
+        this.logger = logger;
 
         this.pool = new Pool({
             connectionString: config.database,
             connectionTimeoutMillis: 10000
+        });
+        this.pool.on('error', (err: Error, _client: PoolClient) => {
+            logger.error(err);
         });
     }
 
