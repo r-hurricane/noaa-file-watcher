@@ -23,6 +23,7 @@ export interface ConfigPath {
     parser: string,
     freq: number | null,
     freqFunc: string | null,
+    literal: boolean | null,
     files: Array<string>
 }
 

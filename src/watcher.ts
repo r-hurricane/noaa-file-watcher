@@ -13,6 +13,7 @@ export class Watcher {
     private readonly path: ConfigPath;
     private readonly logger: Logger;
 
+    private running: boolean = false;
     private timeout: NodeJS.Timeout | null = null;
 
     public constructor(database: FileDatabase, watcher: ConfigWatcher, path: ConfigPath) {
@@ -25,7 +26,7 @@ export class Watcher {
     }
 
     private schedule() : void {
-        (async () => { await this.watch(); })();
+        setImmediate(async () => { await this.watch(); });
         this.timeout = setTimeout(this.schedule.bind(this), this.getFrequency() * 1000);
     }
 
@@ -37,16 +38,32 @@ export class Watcher {
     }
 
     private async watch() : Promise<void> {
+        this.running = true;
         try {
+            // List the files to get their latest last-modified
             const fileService = this.getFileService();
             const files = await fileService.listFiles();
-            const fileContents = await fileService.downloadFile(files[0].path);
-            files.forEach(f => this.logger.info(`${f.path} - ${f.lastModified} - ${f.size}`));
-            this.logger.info(fileContents);
-            this.logger.info(this.database.query());
+
+            // Query the database for the same files found
+            const dbLatest = this.database.getAllLatest(files);
+
+
+            files.forEach(f => this.logger.info(f.toString()));
+            files.forEach(f => this.database.insertFile({
+                    id: null,
+                    fileName: `${this.watcher.type}://${this.watcher.host}${f.path}`,
+                    code: null,
+                    modifiedOn: f.lastModified?.getTime() ?? null,
+                    rawPath: f.path
+                }));
+            //const fileContents = await fileService.downloadFile(files[0].path);
+            //this.logger.info(fileContents);
+            //this.logger.info(this.database.getLatest(`${this.watcher.type}://${this.watcher.host}/atcf/btk/bep032024.dat`)?.toString() ?? 'Not Found');
+            //this.logger.info(this.database.getLatest(`${this.watcher.type}://${this.watcher.host}/atcf/btk/bep032024.dat`, "test")?.toString() ?? 'Not Found');
         } catch(error) {
             this.logger.error(error);
         }
+        this.running = false;
     }
 
     private getFileService(): IFileService {
@@ -60,10 +77,25 @@ export class Watcher {
         }
     }
 
-    public shutdown() : void {
+    public async shutdown() : Promise<boolean> {
         this.logger.debug("Received shutdown signal.");
 
-        if (this.timeout)
+        if (this.timeout) {
             clearTimeout(this.timeout);
+            this.timeout = null;
+        }
+
+        let attempt = 0;
+        while (this.running && ++attempt <= 5) {
+            this.logger.debug('Currently processing a watch. Waiting 1 second.');
+            await new Promise(resolve => setTimeout(resolve, 1000));
+        }
+
+        if (this.timeout) {
+            clearTimeout(this.timeout);
+            this.timeout = null;
+        }
+
+        return !this.running;
     }
 }

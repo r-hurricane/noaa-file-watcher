@@ -17,8 +17,10 @@ try {
 
     // On sigterm, call shutdown
     const shutdown = () => {
-        watchers.forEach(w => w.shutdown());
-        process.exit(0);
+        Promise.all(watchers.map(w => w.shutdown()))
+            .then(v => {
+                process.exit(v.every(r => r) ? 0 : 1);
+            });
     };
     process.on('SIGTERM', shutdown);
     process.on('SIGINT', shutdown);

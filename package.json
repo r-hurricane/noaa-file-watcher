@@ -20,6 +20,7 @@
     "@types/winston": "^2.4.4",
     "basic-ftp": "^5.0.5",
     "config": "^3.3.12",
+    "date-fns": "^4.1.0",
     "winston": "^3.17.0",
     "winston-daily-rotate-file": "^5.0.0"
   }

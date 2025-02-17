@@ -4,20 +4,23 @@ import {ConfigPath, ConfigWatcher} from "../config.js";
 
 export interface IFileInfo {
     path: string,
-    lastModified: string,
+    lastModified: Date | null,
     size: number
 }
 
 export class FileInfo implements IFileInfo {
-
     public readonly path: string;
-    public readonly lastModified: string;
+    public readonly lastModified: Date | null;
     public readonly size: number;
 
-    public constructor(path: string, lastModified: string, size: number) {
+    public constructor(path: string, lastModified: Date | null, size: number) {
         this.path = path;
         this.lastModified = lastModified;
         this.size = size;
+    }
+
+    public toString(): string {
+        return `${this.path} - ${this.lastModified?.toISOString() ?? ' <NULL> '} - ${this.size}`;
     }
 }
 
