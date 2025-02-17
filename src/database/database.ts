@@ -1,7 +1,7 @@
 ﻿// noinspection SqlNoDataSourceInspection
 
 import {config} from '../config.js';
-import createLogger from "../logging.js";
+import {createLogger} from "../logging.js";
 import {DatabaseSync} from 'node:sqlite';
 import fs from "fs";
 import {Logger} from "winston";

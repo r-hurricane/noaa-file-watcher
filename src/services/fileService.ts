@@ -1,5 +1,5 @@
 ﻿import {ConfigPath, ConfigWatcher} from "../config.js";
-import createLogger from "../logging.js";
+import {createLogger} from "../logging.js";
 import nodePath from 'node:path';
 import {Logger} from "winston";
 

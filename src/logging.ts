@@ -1,8 +1,8 @@
 ﻿import {config} from './config.js';
-import {createLogger, format, transports} from "winston";
+import {createLogger as winCreateLogger, format, transports} from "winston";
 import 'winston-daily-rotate-file';
 
-const printf = (padLength : number) => {
+const printf = (padLength: number) => {
     return format.printf(({ level, message, label, timestamp, stack, cause } ) => {
         const levelStr = level.padStart(padLength, ' ');
         let err = '';
@@ -19,7 +19,24 @@ const printf = (padLength : number) => {
     })
 };
 
-export default (label : string)=> {
+export const errorTrace = (error: unknown)=> {
+    if (!(error instanceof Error))
+        return `${error}`;
+
+    let err = error.message;
+    if (error.stack) {
+        err += `\n-- Stack ${''.padStart(41, '-')}\n${error.stack}`;
+    }
+    if (error.cause) {
+        err += `\n-- Cause ${''.padStart(41, '-')}\n${(error.cause as any).stack || error.cause}`;
+    }
+    if (err.length > 0) {
+        err += `\n${''.padStart(50, '=')}`;
+    }
+    return err;
+}
+
+export const createLogger = (label: string)=> {
 
     const consoleTransport = new transports.Console({
         handleExceptions: true,
@@ -40,7 +57,7 @@ export default (label : string)=> {
     });
     fileTransport.setMaxListeners(30);
 
-    return createLogger({
+    return winCreateLogger({
         level: config.logLevel,
         defaultMeta: {service: 'wmo-fetch'},
         format: format.combine(

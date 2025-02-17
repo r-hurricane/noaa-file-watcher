@@ -2,7 +2,7 @@
 import {ConfigPath, ConfigWatcher} from "../config.js";
 import * as dateFns from 'date-fns';
 import {FileServiceBase,FileInfo} from "./fileService.js";
-import {Writable} from 'stream';
+import {Writable} from 'node:stream';
 
 export class FtpFileService extends FileServiceBase {
 

@@ -1,9 +1,9 @@
 ﻿import {config} from '../config.js';
-import createLogger from "../logging.js";
+import {createLogger, errorTrace} from "../logging.js";
 
 export class DiscordNotifier {
 
-    public static Send(content : string) {
+    public static async Send(content: string, error: unknown = null) {
 
         const logger = createLogger('Discord');
         const discordConfig = config.notifications.discord;
@@ -30,8 +30,13 @@ export class DiscordNotifier {
             }
         }
 
+        // Add error message in code block
+        if (error) {
+            transformMessage += '\n```\n' + errorTrace(error) + '\n```';
+        }
+
         // Helper method for mock sending
-        const sendMessage = (hook : string, message : string )=> {
+        const sendMessage = async (hook: string, message: string )=> {
             // Build the log message
             const logMessage = `Discord Message (${hook}):\n${message}\n${''.padStart(53, '-')}`;
 
@@ -43,16 +48,16 @@ export class DiscordNotifier {
 
             logger.debug(logMessage);
 
-            fetch(hook, {
+            await fetch(hook, {
                 method: 'POST',
                 headers: {"Content-Type": "application/json"},
                 body: JSON.stringify({content: message})
-            }).then(_ => null);
+            });
         }
 
         // Send the message to each hook
         for (let hook of hooks) {
-            sendMessage(hook, transformMessage);
+            await sendMessage(hook, transformMessage);
         }
     }
 }

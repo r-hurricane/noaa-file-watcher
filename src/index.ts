@@ -1,31 +1,55 @@
 ﻿import {config} from './config.js';
+import {createLogger} from './logging.js';
 import {FileDatabase} from "./database/database.js";
-import createLogger from './logging.js';
 import {Watcher} from "./watcher.js";
+import {DiscordNotifier} from "./notifications/discord.js";
 
-const logger = createLogger('Index');
+(async () => {
+    const logger = createLogger('Index');
 
-try {
+    try {
 
-    // Create database
-    const database = new FileDatabase();
+        logger.info("Starting NOAA File Watcher");
 
-    // Create an instance of each watcher
-    const watchers : Array<Watcher> = config.watchers
-        .flatMap(w => w.paths
-            .map(p => new Watcher(database, w, p)));
+        // Create database
+        const database = new FileDatabase();
 
-    // On sigterm, call shutdown
-    const shutdown = () => {
-        Promise.all(watchers.map(w => w.shutdown()))
-            .then(v => {
-                process.exit(v.every(r => r) ? 0 : 1);
-            });
-    };
-    process.on('SIGTERM', shutdown);
-    process.on('SIGINT', shutdown);
+        // Create an instance of each watcher
+        const watchers : Array<Watcher> = config.watchers
+            .flatMap(w => w.paths
+                .map(p => new Watcher(database, w, p)));
 
-} catch (error) {
-    logger.error('General unhandled error:');
-    logger.error(error);
-}
+        // On sigterm, call shutdown
+        const shutdown = (signal: string) => {
+            logger.info(`Received ${signal} signal. Notifying shutdown to all watchers.`);
+
+            DiscordNotifier.Send(`# NOAA File Watcher Shutdown\n## Event: ${signal}\n<@beach> NOAA File Watcher has received a ${signal} and shutdown.`)
+                .then(() => {
+                    Promise.all(watchers.map(w => w.shutdown()))
+                        .then((v) => {
+                            logger.info('Shutdown process complete. Goodbye!');
+                            process.exit(v.every(r => r) ? 0 : 1);
+                        })
+                        .catch(e => {
+                            logger.error('Error when shutting down watchers');
+                            logger.error(e);
+                            process.exit(1);
+                        });
+                })
+                .catch(e => {
+                    logger.error('Error sending shutdown to Discord');
+                    logger.error(e);
+                    process.exit(1);
+                });
+        };
+        process.on('SIGTERM', () => shutdown('SIGTERM'));
+        process.on('SIGINT', () => shutdown('SIGINT'));
+
+        await DiscordNotifier.Send('# NOAA File Watcher Started');
+
+    } catch (error) {
+        logger.error('General unhandled error:');
+        logger.error(error);
+        await DiscordNotifier.Send('# Unhandled application error.\n## Service shut down!\n@everyone <@beach> NOAA File Watcher has encountered an unrecoverable error and has shutdown.', error);
+    }
+})();

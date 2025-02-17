@@ -1,13 +1,14 @@
 ﻿import {config, ConfigPath, ConfigWatcher} from "./config.js";
-import createLogger from "./logging.js";
+import {createLogger} from "./logging.js";
 import * as dateFns from 'date-fns';
 import {FileDatabase, INoaaFileModel} from "./database/database.js";
-import fs from "fs";
+import fs from "node:fs";
 import {FtpFileService} from "./services/ftpFileService.js";
 import {HttpFileService} from "./services/httpFileService.js";
 import {IFileInfo, IFileService} from "./services/fileService.js";
 import {Logger} from 'winston';
 import nodePath from "node:path";
+import {DiscordNotifier} from "./notifications/discord.js";
 
 export class Watcher {
 
@@ -59,13 +60,17 @@ export class Watcher {
             for (const f of files) {
                 try {
                     await this.checkFile(f, dbLatest, fileService);
-                } catch(error) {
+                } catch (error) {
+                    this.logger.error(`Failed to download the contents of new file: ${f}`);
                     this.logger.error(error);
+                    await DiscordNotifier.Send(`<@beach> Failed to download the contents of new file: ${f}`, error);
                 }
             }
 
-        } catch(error) {
+        } catch (error) {
+            this.logger.error(`Error running watch checks on ${this.baseUrl}:`);
             this.logger.error(error);
+            await DiscordNotifier.Send(`<@beach> Error running watch checks on ${this.baseUrl}:`, error);
         }
         this.running = false;
     }
@@ -111,7 +116,7 @@ export class Watcher {
         // Check not null
         if (!fileContents) {
             this.logger.error(`Failed to download the contents of ${file}`);
-            // TODO: Send notifications
+            await DiscordNotifier.Send(`Failed to download the contents of new file ${file}`);
             return;
         }
 
@@ -147,7 +152,7 @@ export class Watcher {
     }
 
     public async shutdown() : Promise<boolean> {
-        this.logger.debug("Received shutdown signal.");
+        this.logger.debug('Received shutdown signal.');
 
         if (this.timeout) {
             clearTimeout(this.timeout);
@@ -163,6 +168,10 @@ export class Watcher {
         if (this.timeout) {
             clearTimeout(this.timeout);
             this.timeout = null;
+        }
+
+        if (this.running) {
+            this.logger.error('Watcher did not shut down in time.');
         }
 
         return !this.running;

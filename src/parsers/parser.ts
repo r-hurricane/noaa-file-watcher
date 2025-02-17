@@ -1,4 +1,4 @@
-﻿import createLogger from "../logging.js";
+﻿import {createLogger} from "../logging.js";
 import {IFileInfo} from "../services/fileService.js";
 import {Logger} from "winston";
 
@@ -9,7 +9,7 @@ export interface IParser {
 export abstract class Parser implements IParser {
     protected logger: Logger;
 
-    constructor(label: string) {
+    protected constructor(label: string) {
         this.logger = createLogger(label);
     }
 
