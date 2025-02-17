@@ -21,14 +21,13 @@
 	},
 	"watchers": [
 		{
-			"type": "ftp",
-			"host": "tgftp.nws.noaa.gov",
-			"base": "/data/raw",
+			"baseUrl": "ftp://tgftp.nws.noaa.gov/data/raw",
 			"freq": 60,
 			"paths": [
 				{
 					"path": "/no",
 					"parser": "wmo",
+					"literal": true,
 					"files": [
 						"nous42.knhc.rep.rpd.txt"
 					]
@@ -44,16 +43,27 @@
 			]
 		},
 		{
-			"type": "ftp",
-			"host": "ftp.nhc.noaa.gov",
-			"base": "/",
+			"baseUrl": "ftp://ftp.nhc.noaa.gov",
 			"freq": 60,
 			"paths": [
 				{
 					"path": "/atcf/btk/",
 					"parser": "atcf",
 					"files": [
-						".*\\.dat"
+						"b(al|ep|cp).*\\.dat"
+					]
+				}
+			]
+		},
+		{
+			"baseUrl": "https://www.nhc.noaa.gov",
+			"freq": 60,
+			"paths": [
+				{
+					"path": "/archive/xgtwo/atl/latest",
+					"parser": "shape",
+					"files": [
+						"gtwo_shapefiles.zip"
 					]
 				}
 			]

@@ -1,22 +1,20 @@
 ﻿import {ConfigPath, ConfigWatcher} from "../config.js";
 import {FileServiceBase,FileInfo} from "./fileService.js";
-import nodePath from "node:path";
 import * as dateFns from "date-fns";
 
 export class HttpFileService extends FileServiceBase {
 
-    private readonly path: string;
-
     public constructor(watcher: ConfigWatcher, path: ConfigPath) {
         super(watcher, path, "HTTP");
-        this.path = nodePath.normalize(watcher.base + "/" + path.path);
     }
 
     public override async listFiles(): Promise<Array<FileInfo>> {
         const fileInfos: Array<FileInfo> = [];
         for (let f of this.pathConfig.files) {
             const url = this.normalizeFilePath(f);
+            this.logger.debug(`Requesting HEAD for ${url}`);
             const fReq = await this.fetchFile(url, true);
+            this.logger.debug(`Received HEAD for ${url}: ${fReq}`);
             fileInfos.push(new FileInfo(
                 url,
                 this.parseDate(fReq.headers.get('Last-Modified')),
@@ -27,16 +25,13 @@ export class HttpFileService extends FileServiceBase {
     }
 
     public override async downloadFile(file: string): Promise<string | null> {
+        this.logger.debug(`Downloading file contents ${file}`);
         const response = await this.fetchFile(this.normalizeFilePath(file), false);
+        this.logger.debug(`Received file contents ${file}`);
         return response.text();
     }
 
-    private normalizeFilePath(file: string): string {
-        return nodePath.normalize(file.startsWith(this.path) ? file : this.path + '/' + file);
-    }
-
-    private async fetchFile(file: string, headOnly: boolean): Promise<Response> {
-        const url = 'https://' + this.watcherConfig.host + '/' + file;
+    private async fetchFile(url: URL, headOnly: boolean): Promise<Response> {
         return await fetch(url, { method: headOnly ? 'HEAD' : 'GET' });
     }
 

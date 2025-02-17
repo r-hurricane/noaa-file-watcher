@@ -28,9 +28,7 @@ export interface ConfigPath {
 }
 
 export interface ConfigWatcher {
-    type: string,
-    host: string,
-    base: string,
+    baseUrl: string,
     freq: number | null,
     freqFunc: string | null,
     paths: Array<ConfigPath>

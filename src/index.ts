@@ -26,6 +26,6 @@ try {
     process.on('SIGINT', shutdown);
 
 } catch (error) {
-    logger.error('Error in file watcher: ');
+    logger.error('General unhandled error:');
     logger.error(error);
 }

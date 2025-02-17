@@ -36,66 +36,66 @@ export class FileDatabase {
         this.logger.debug('Creating new database schema.');
         this.handle.exec(`CREATE TABLE NoaaFile(
             id INTEGER PRIMARY KEY AUTOINCREMENT,
-            fileName TEXT,
+            href TEXT,
             code TEXT,
             modifiedOn INTEGER,
-            rawPath TEXT
+            savePath TEXT
         );`);
-        this.handle.exec(`CREATE INDEX UX_NoaaFile_fileName ON NoaaFile(fileName);`);
+        this.handle.exec(`CREATE INDEX UX_NoaaFile_href ON NoaaFile(href);`);
         this.handle.exec(`CREATE INDEX UX_NoaaFile_code ON NoaaFile(code);`);
         this.handle.exec(`CREATE INDEX UX_NoaaFile_modifiedOn ON NoaaFile(modifiedOn);`);
-        this.handle.exec(`CREATE UNIQUE INDEX UX_NoaaFile_code_modifiedOn ON NoaaFile(fileName, modifiedOn);`);
+        this.handle.exec(`CREATE UNIQUE INDEX UX_NoaaFile_href_modifiedOn ON NoaaFile(href, modifiedOn);`);
     }
 
     public getAllLatest(files: Array<IFileInfo>): Map<string, NoaaFileModel | null> {
         const select = this.handle.prepare(`
-            SELECT id, fileName, code, modifiedOn, rawPath
+            SELECT id, href, code, modifiedOn, savePath
             FROM NoaaFile
-            WHERE fileName=@fileName
+            WHERE href=@href
             ORDER BY modifiedOn DESC LIMIT 1
         `);
 
         const result = new Map<string, NoaaFileModel | null>();
         for (const file of files) {
-            const dbEntry = select.get({fileName: file.path});
-            result.set(file.path, dbEntry ? new NoaaFileModel({...dbEntry} as INoaaFileModel) : null);
+            const dbEntry = select.get({href: file.url.href});
+            result.set(file.url.href, dbEntry ? new NoaaFileModel({...dbEntry} as INoaaFileModel) : null);
         }
 
         return result;
     }
 
     public insertFile(file: INoaaFileModel) {
-        this.handle.prepare(`INSERT INTO NoaaFile(fileName, code, modifiedOn, rawPath) VALUES (@fileName, @code, @modifiedOn, @rawPath)`)
-            .run({fileName: file.fileName, code: file.code, modifiedOn: file.modifiedOn, rawPath: file.rawPath});
+        this.handle.prepare(`INSERT INTO NoaaFile(href, code, modifiedOn, savePath) VALUES (@href, @code, @modifiedOn, @savePath)`)
+            .run({href: file.href, code: file.code, modifiedOn: file.modifiedOn, savePath: file.savePath});
     }
 
 }
 
 export interface INoaaFileModel {
     id: number | null;
-    fileName: string | null;
+    href: string | null;
     code: string | null;
     modifiedOn: number | null;
-    rawPath: string | null;
+    savePath: string | null;
 }
 
 export class NoaaFileModel implements INoaaFileModel {
     public id: number | null = null;
-    public fileName: string | null = null;
+    public href: string | null = null;
     public code: string | null = null;
     public modifiedOn: number | null = null;
-    public rawPath: string | null = null;
+    public savePath: string | null = null;
 
     public constructor(param: INoaaFileModel)
     {
         this.id = param?.id ?? null;
-        this.fileName = param?.fileName ?? null;
+        this.href = param?.href ?? null;
         this.code = param?.code ?? null;
         this.modifiedOn = param?.modifiedOn ?? null;
-        this.rawPath = param?.rawPath ?? null;
+        this.savePath = param?.savePath ?? null;
     }
 
     public toString(): string {
-        return `NoaaFile(id=${this.id}, fileName=${this.fileName}, code=${this.code}, modifiedOn=${this.modifiedOn}, rawPath=${this.rawPath})`;
+        return `NoaaFile(id=${this.id}, href=${this.href}, code=${this.code}, modifiedOn=${this.modifiedOn}, savePath=${this.savePath})`;
     }
 }

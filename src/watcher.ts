@@ -9,18 +9,20 @@ import {IFileService} from "./services/fileService.js";
 export class Watcher {
 
     private readonly database: FileDatabase;
-    private readonly watcher: ConfigWatcher;
-    private readonly path: ConfigPath;
+    private readonly watcherConfig: ConfigWatcher;
+    private readonly pathConfig: ConfigPath;
+    private readonly baseUrl: URL;
     private readonly logger: Logger;
 
     private running: boolean = false;
     private timeout: NodeJS.Timeout | null = null;
 
-    public constructor(database: FileDatabase, watcher: ConfigWatcher, path: ConfigPath) {
+    public constructor(database: FileDatabase, watcherConfig: ConfigWatcher, pathConfig: ConfigPath) {
         this.database = database;
-        this.watcher = watcher;
-        this.path = path;
-        this.logger = createLogger(`Watcher (${watcher.host}${watcher.base}${path.path})`);
+        this.watcherConfig = watcherConfig;
+        this.pathConfig = pathConfig;
+        this.baseUrl = new URL(pathConfig.path, watcherConfig.baseUrl);
+        this.logger = createLogger(`Watcher (${this.baseUrl})`);
 
         this.schedule();
     }
@@ -31,10 +33,13 @@ export class Watcher {
     }
 
     private getFrequency() : number {
+        const freq = this.pathConfig.freq || this.watcherConfig.freq || 60;
+
         // TODO: Handle the path.freqFunc
-        if (this.path.freqFunc)
-            this.logger.warn(`FreqFunc not supported at this time. Using ${this.path.freq || this.watcher.freq || 60}.`);
-        return this.path.freq || this.watcher.freq || 60;
+        if (this.pathConfig.freqFunc)
+            this.logger.warn(`FreqFunc not supported at this time. Using ${freq}.`);
+
+        return freq;
     }
 
     private async watch() : Promise<void> {
@@ -46,15 +51,14 @@ export class Watcher {
 
             // Query the database for the same files found
             const dbLatest = this.database.getAllLatest(files);
-
-
-            files.forEach(f => this.logger.info(f.toString()));
+            this.logger.info(dbLatest.size);
+            files.forEach(f => this.logger.info(f.url.href));
             files.forEach(f => this.database.insertFile({
                     id: null,
-                    fileName: `${this.watcher.type}://${this.watcher.host}${f.path}`,
+                    href: f.url.href,
                     code: null,
                     modifiedOn: f.lastModified?.getTime() ?? null,
-                    rawPath: f.path
+                    savePath: f.url.pathname
                 }));
             //const fileContents = await fileService.downloadFile(files[0].path);
             //this.logger.info(fileContents);
@@ -67,13 +71,15 @@ export class Watcher {
     }
 
     private getFileService(): IFileService {
-        switch (this.watcher.type) {
+        const urlScheme = this.baseUrl.protocol.replace(/:$/, '');
+        switch (urlScheme) {
             case 'ftp':
-                return new FtpFileService(this.watcher, this.path);
+                return new FtpFileService(this.watcherConfig, this.pathConfig);
             case 'http':
-                return new HttpFileService(this.watcher, this.path);
+            case 'https':
+                return new HttpFileService(this.watcherConfig, this.pathConfig);
             default:
-                throw new Error('Unknown file service type ' + this.watcher.type);
+                throw new Error('Unknown file service type ' + urlScheme);
         }
     }
 

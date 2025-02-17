@@ -2,32 +2,23 @@
 import {ConfigPath, ConfigWatcher} from "../config.js";
 import * as dateFns from 'date-fns';
 import {FileServiceBase,FileInfo} from "./fileService.js";
-import nodePath from 'node:path';
 import {Writable} from 'stream';
 
 export class FtpFileService extends FileServiceBase {
 
     private readonly client: Client;
-    private readonly baseUrl: string;
 
     public constructor(watcher: ConfigWatcher, path: ConfigPath) {
         super(watcher, path, "FTP");
         this.client = new Client();
-        this.client.ftp.verbose = true;
-        this.baseUrl = nodePath.normalize(watcher.base + "/" + path.path);
-
-        if (this.pathConfig.literal) {
-
-            if (this.pathConfig.files.length !== 1)
-                throw new Error('Literal path can only be used with one file.');
-
-            this.baseUrl = nodePath.normalize(this.baseUrl + "/" + this.pathConfig.files[0]);
-        }
+        //this.client.ftp.verbose = true;
     }
 
     public override async listFiles(): Promise<Array<FileInfo>> {
         await this.access();
-        const files = await this.client.list(this.baseUrl);
+        this.logger.debug('Starting file list request');
+        const files = await this.client.list(this.baseUrl.pathname);
+        this.logger.debug(`Received ${files.length} files from server`);
         return files
             .filter(f => this.pathConfig.files
                 .some(c => f.name.match(c)))
@@ -46,12 +37,12 @@ export class FtpFileService extends FileServiceBase {
                 callback();
             }
         });
-        await this.client.downloadTo(myStream, this.normalizeFilePath(file));
-        return Buffer.concat(chunks).toString();
-    }
 
-    private normalizeFilePath(file: string): string {
-        return nodePath.normalize(file.startsWith(this.baseUrl) ? file : this.baseUrl + '/' + file);
+        const downloadPath = this.normalizeFilePath(file).pathname;
+        this.logger.debug(`Starting to download file contents from FTP: ${downloadPath}`);
+        await this.client.downloadTo(myStream, downloadPath);
+        this.logger.debug(`Finished downloading file contents from FTP: ${downloadPath}`);
+        return Buffer.concat(chunks).toString();
     }
 
     private parseDate(dateStr: string): Date | null {
@@ -72,12 +63,10 @@ export class FtpFileService extends FileServiceBase {
     }
 
     private async access() {
-        const colPos = this.watcherConfig.host.indexOf(':');
-        const host = colPos >= 0 ? this.watcherConfig.host.substring(0, colPos) : this.watcherConfig.host;
-        const port = colPos >= 0 ? parseInt(this.watcherConfig.host.substring(colPos +1)) : 21;
+        this.logger.debug(`Connecting to ${this.baseUrl}`);
         return this.client.access({
-            host: host,
-            port: port
+            host: this.baseUrl.hostname,
+            port: parseInt(this.baseUrl.port) || 21
         });
     }
 
