@@ -33,13 +33,15 @@ export class Watcher {
         this.baseUrl = new URL(nodePath.normalize(nodePath.join(watcherConfig.baseUrl, pathConfig.path)));
         this.logger = createLogger(`Watcher (${this.baseUrl})`);
 
+        this.logger.info(`Registered watcher.`);
+
         this.schedule();
     }
 
     private schedule() : void {
         // Log check starting and next check time.
         const freq = this.getFrequency();
-        this.logger.info(`Checking ${this.watcherConfig.baseUrl}/${this.pathConfig.path}. Next in ${freq} minutes.`);
+        this.logger.info(`Checking for updates. Next check in ${freq} minutes.`);
 
         // Call watch in next tick (async)
         setImmediate(async () => { await this.watch(); });
