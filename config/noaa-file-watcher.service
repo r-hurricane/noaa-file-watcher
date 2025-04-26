@@ -1,0 +1,21 @@
+﻿[Unit]
+Description=NOAA File Watcher
+Before=discord-notifier
+After=network.target
+PropagatesStopTo=discord-notifier
+
+[Service]
+Type=simple
+Restart=always
+RestartSec=10
+TimeoutSec=10
+User=rhurricane
+ExecStart=/usr/local/bin/node /opt/rhurricane/noaa-file-watcher/dist/index.js
+WorkingDirectory=/opt/rhurricane/noaa-file-watcher
+StandardOutput=syslog
+StandardError=syslog
+SyslogIdentifier=noaa-file-watcher
+Environment=NODE_ENV=production
+
+[Install]
+WantedBy=multi-user.target
