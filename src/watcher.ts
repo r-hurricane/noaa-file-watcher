@@ -37,8 +37,15 @@ export class Watcher {
     }
 
     private schedule() : void {
+        // Log check starting and next check time.
+        const freq = this.getFrequency();
+        this.logger.info(`Checking ${this.watcherConfig.baseUrl}/${this.pathConfig.path}. Next in ${freq} minutes.`);
+
+        // Call watch in next tick (async)
         setImmediate(async () => { await this.watch(); });
-        this.timeout = setTimeout(this.schedule.bind(this), this.getFrequency() * 60000);
+
+        // And schedule next watch based on frequency
+        this.timeout = setTimeout(this.schedule.bind(this), freq * 60000);
     }
 
     private getFrequency() : number {
