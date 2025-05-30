@@ -12,7 +12,9 @@ export class WmoParser extends ParserBase {
     }
 
     public override async parse(file: IFileInfo, savePath: string, fileContents: Uint8Array<ArrayBufferLike>)
-        : Promise<IParserResult> {
+        : Promise<IParserResult>
+    {
+
         // Parse the WMO
         this.logger.debug('Starting to parse WMO contents');
         if (this.logger.isSillyEnabled()) this.logger.silly(fileContents);
