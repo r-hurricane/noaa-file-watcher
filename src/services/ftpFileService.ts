@@ -61,7 +61,7 @@ export class FtpFileService extends FileServiceBase {
         // If the date looks like MMM dd HH:mm (assuming date is UTC)
         if (dateStr.match(/\w{3}\s+\d\d?\s+\d{2}:\d{2}/)) {
             let now = new Date();
-            let date = dateFns.parse(dateStr + 'Z', 'MMM d HH:mmX', now);
+            let date = dateFns.parse(dateStr.replace('  ', ' ') + 'Z', 'MMM d HH:mmX', now);
 
             // If the date is in the future (by more than an hour) it was likely modified last year
             // i.e. Modified "Dec 28 21:07" but now is 1/1/2025 - The file wqs actually 12/28/2024 not 12/28/2025
