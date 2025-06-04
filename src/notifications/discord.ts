@@ -47,13 +47,20 @@ export class DiscordNotifier {
                 return;
             }
 
+            logger.info('Sending notification message to discord.');
             logger.debug(logMessage);
 
-            await fetch(hook, {
+            const resp = await fetch(hook, {
                 method: 'POST',
                 headers: {"Content-Type": "application/json"},
                 body: JSON.stringify({content: message})
             });
+
+            if (resp.status >= 300) {
+                logger.error(`Discord Error Response: ${resp.status} ${resp.statusText}`);
+            } else {
+                logger.debug('Discord response: ', resp.statusText);
+            }
         }
 
         // Send the message to each hook
