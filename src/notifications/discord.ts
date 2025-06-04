@@ -47,6 +47,9 @@ export class DiscordNotifier {
                 return;
             }
 
+            if (message.length > 2000)
+                message = message.substring(0, 2000);
+
             logger.info('Sending notification message to discord.');
             logger.debug(logMessage);
 
