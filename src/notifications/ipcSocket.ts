@@ -1,5 +1,5 @@
 ﻿import {config} from '../config.js';
-import {createLogger} from "../logging.js";
+import {createLogger, setLogLevel} from "../logging.js";
 import {Logger} from "winston";
 import {createServer, Server, Socket} from "node:net";
 import * as fs from 'node:fs';
@@ -43,8 +43,13 @@ export class IpcController {
             this.clientList.push(socket);
 
             socket.on('data', data => {
+                // If received command string, perform command
+                const dataStr = data.toString();
+                if (this.actionCommand(dataStr, socket)) return;
+
+                // Otherwise, set as name (backwards compatibility)
                 const oldName = socketName;
-                socketName = data.toString();
+                socketName = dataStr;
                 this.logger.verbose(`IPC client ${oldName} => ${socketName}`);
             });
 
@@ -94,5 +99,39 @@ export class IpcController {
             this.server.close(_ => res());
         });
         return true;
+    }
+
+    private actionCommand(cmd: string, socket: Socket): boolean {
+        // Ensure lowercase
+        cmd = cmd.toLowerCase();
+
+        // Helper for sending message back to client
+        const sendMsg = (msg: string, close: boolean = true) => {
+            socket.cork();
+            socket.write(msg);
+            process.nextTick(() => {
+                socket.uncork();
+                if (close) socket.end();
+            });
+        };
+
+        // Set log level
+        if (cmd.startsWith('loglevel')) {
+            // Extract level
+            const level = cmd.substring(8).trim();
+            const levels = ['error', 'warn', 'info', 'verbose', 'debug', 'silly'];
+            if (levels.indexOf(level) < 0) {
+                sendMsg(`Invalid log level ${level}. Must be [${levels.join(',')}].`);
+                this.logger.warn(`Received invalid log level request: ${level})`);
+            } else {
+                const oldLvl = setLogLevel(level);
+                const msg = `Set log level from ${oldLvl} to ${level}`;
+                this.logger.info(msg);
+                sendMsg(msg);
+            }
+            return true;
+        }
+
+        return false;
     }
 }

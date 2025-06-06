@@ -1,5 +1,5 @@
 ﻿import {config} from './config.js';
-import {createLogger as winCreateLogger, format, transports} from "winston";
+import {createLogger as winCreateLogger, format, Logger, transports} from "winston";
 import 'winston-daily-rotate-file';
 
 const printf = (padLength: number) => {
@@ -31,7 +31,10 @@ const fileTransport = new transports.DailyRotateFile({
     handleExceptions: true,
     dirname: 'logs',
     filename: 'wmo-fetch-%DATE%.log',
-    format: printf(5),
+    format: format.combine(
+        format.colorize({all: true}),
+        printf(15)
+    ),
     datePattern: 'YYYY-MM-DD',
     maxSize: '20m',
     maxFiles: '14d'
@@ -70,6 +73,18 @@ export const errorTrace = (error: unknown)=> {
     return err;
 }
 
+const loggers: Logger[] = [];
 export const createLogger = (label: string)=> {
-    return logger.child({label});
+    const child = logger.child({label});
+    loggers.push(child);
+    return child;
+}
+
+export const setLogLevel = (level: string) => {
+    const oldLevel = loggers.length > 0 ? loggers[0].level : 'unknown';
+    loggers.forEach(l => {
+        l.level = level;
+        l.transports.forEach(t => t.level = level);
+    });
+    return oldLevel;
 }
