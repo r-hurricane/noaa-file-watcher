@@ -73,18 +73,43 @@ export const errorTrace = (error: unknown)=> {
     return err;
 }
 
-const loggers: Logger[] = [];
+const loggerNameMap: Map<string, Logger> = new Map<string, Logger>();
 export const createLogger = (label: string)=> {
     const child = logger.child({label});
-    loggers.push(child);
+    loggerNameMap.set(label.toLowerCase(), child);
     return child;
 }
 
-export const setLogLevel = (level: string) => {
-    const oldLevel = loggers.length > 0 ? loggers[0].level : 'unknown';
+export const setLogLevel = (level: string, name: string | undefined) => {
+    // Find logger, if specified
+    let loggers: Logger[];
+    if(name && name.toLowerCase() !== 'all') {
+        const found = loggerNameMap.get(name.toLowerCase());
+        if (!found)
+            return `Failed to find a logger named ${name}. Current loggers:\n${[...loggerNameMap].map(e => `  ${e[0]}: ${e[1].level}`).join('\n')}`;
+        loggers = [found];
+    } else {
+        loggers = [...loggerNameMap.values()];
+    }
+
+    // If no loggers, return
+    if (loggers.length <= 0)
+        return `Found no loggers to set log level`;
+
+    // Force level to lower
+    level = level.toLowerCase();
+
+    // Determine current log level and valid log levels
+    const oldLevel = loggers[0].level;
+    const validLevels = Object.keys(loggers[0].levels);
+    if (validLevels.indexOf(level) <= -1)
+        return `Invalid log level ${level}. Must be [${validLevels.join()}].`;
+
+    // Finally, set the log level on all loggers and transports for each logger
     loggers.forEach(l => {
         l.level = level;
         l.transports.forEach(t => t.level = level);
     });
-    return oldLevel;
+
+    return `Changed log level on ${name ?? 'all'}: ${oldLevel} => ${level}`;
 }

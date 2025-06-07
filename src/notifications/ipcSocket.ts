@@ -43,8 +43,10 @@ export class IpcController {
             this.clientList.push(socket);
 
             socket.on('data', data => {
-                // If received command string, perform command
                 const dataStr = data.toString();
+                if (!dataStr || dataStr.length <= 0) return;
+
+                // If received command string, perform command
                 if (this.actionCommand(dataStr, socket)) return;
 
                 // Otherwise, set as name (backwards compatibility)
@@ -101,9 +103,15 @@ export class IpcController {
         return true;
     }
 
-    private actionCommand(cmd: string, socket: Socket): boolean {
-        // Ensure lowercase
-        cmd = cmd.toLowerCase();
+    private actionCommand(paramStr: string, socket: Socket): boolean {
+        // Split param string into param
+        const params = paramStr.trim().split(/\s+/);
+
+        // If params is 1, assume name for backwards compatibility
+        if (params.length <= 1) return false;
+
+        // Force cmd to lower
+        const cmd = params[0].toLowerCase();
 
         // Helper for sending message back to client
         const sendMsg = (msg: string, close: boolean = true) => {
@@ -116,22 +124,10 @@ export class IpcController {
         };
 
         // Set log level
-        if (cmd.startsWith('loglevel')) {
-            // Extract level
-            const level = cmd.substring(8).trim();
-            const levels = ['error', 'warn', 'info', 'verbose', 'debug', 'silly'];
-            if (levels.indexOf(level) < 0) {
-                sendMsg(`Invalid log level ${level}. Must be [${levels.join(',')}].`);
-                this.logger.warn(`Received invalid log level request: ${level})`);
-            } else {
-                const oldLvl = setLogLevel(level);
-                const msg = `Set log level from ${oldLvl} to ${level}`;
-                this.logger.info(msg);
-                sendMsg(msg);
-            }
-            return true;
+        if (cmd === 'loglevel') {
+            sendMsg(setLogLevel(params[1], params[2]));
         }
 
-        return false;
+        return true;
     }
 }
