@@ -31,6 +31,7 @@ export class AtcfParser extends ParserBase {
         fs.writeFileSync(saveJsonPath, jsonContents);
         this.logger.debug(`Saved JSON to filesystem at ${saveJsonPath}`);
 
-        return { code: `ATCF.${saveUrl.name}`, json: atcfFile };
+        // The code for a storm is not the file path but the basin + gen number.
+        return { code: `ATCF.${atcfFile.data[0].date?.getFullYear()}${atcfFile.data[0].basin}${atcfFile.genNo}`, json: atcfFile };
     }
 }
