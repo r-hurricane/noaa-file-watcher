@@ -34,7 +34,12 @@ export class HttpFileService extends FileServiceBase {
     }
 
     private async fetchFile(url: URL, headOnly: boolean): Promise<Response> {
-        return await fetch(url, { method: headOnly ? 'HEAD' : 'GET' });
+        return await fetch(url, {
+            headers: {
+                'User-Agent': 'Mozilla/5.0 (compatible; RHurricaneBot/1.0; +http://rhurricane.net)'
+            },
+            method: headOnly ? 'HEAD' : 'GET'
+        });
     }
 
     private parseDate(dateStr: string | null): Date | null {
