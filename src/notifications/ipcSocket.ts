@@ -4,6 +4,7 @@ import {Logger} from "winston";
 import {createServer, Server, Socket} from "node:net";
 import * as fs from 'node:fs';
 import path from "node:path";
+import {Watcher} from "../watcher.js";
 
 export class IpcController {
 
@@ -107,9 +108,6 @@ export class IpcController {
         // Split param string into param
         const params = paramStr.trim().split(/\s+/);
 
-        // If params is 1, assume name for backwards compatibility
-        if (params.length <= 1) return false;
-
         // Force cmd to lower
         const cmd = params[0].toLowerCase();
 
@@ -123,11 +121,20 @@ export class IpcController {
             });
         };
 
-        // Set log level
-        if (cmd === 'loglevel') {
-            sendMsg(setLogLevel(params[1], params[2]));
+        switch (cmd) {
+
+            // Set log level
+            case 'loglevel':
+                sendMsg(setLogLevel(params[1], params[2]));
+                return true;
+
+            // Force check of specific file or all files
+            case 'check':
+                Watcher.Watchers.forEach(w => w.watch());
+                sendMsg('Triggered checks');
+                return true;
         }
 
-        return true;
+        return false;
     }
 }

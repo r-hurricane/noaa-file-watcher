@@ -11,7 +11,7 @@ import {config} from '../config.js';
         return;
     }
 
-    const cmdList = ['loglevel'];
+    const cmdList = ['loglevel', 'check'];
     if (cmdList.indexOf(args[0]) <= -1) {
         console.error(`Invalid command ${args[0]}. Must be [${cmdList.join()}].`);
         return;

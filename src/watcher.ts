@@ -15,6 +15,8 @@ import {IParserResult} from "./parsers/parser.js";
 
 export class Watcher {
 
+    public static readonly Watchers: Watcher[] = [];
+
     private readonly database: FileDatabase;
     private readonly ipcController: IpcController;
     private readonly watcherConfig: ConfigWatcher;
@@ -33,6 +35,7 @@ export class Watcher {
         this.baseUrl = new URL(nodePath.normalize(nodePath.join(watcherConfig.baseUrl, pathConfig.path)));
         this.logger = createLogger(`Watcher (${this.baseUrl})`);
 
+        Watcher.Watchers.push(this);
         this.logger.info(`Registered watcher.`);
 
         this.schedule();
@@ -60,7 +63,7 @@ export class Watcher {
         return freq;
     }
 
-    private async watch() : Promise<void> {
+    public async watch() : Promise<void> {
         this.running = true;
         try {
             // List the files to get their latest last-modified
